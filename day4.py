@@ -10,6 +10,21 @@ def parse(input):
 TEST = parse(open("test/4.txt", "r").readlines())
 INPUT = parse(open("input/4.txt", "r").readlines())
 
+ROLL = "@"
+EMPTY = "."
+
+
+def at(grid, coord):
+    (x, y) = coord
+    return grid[y][x]
+
+
+def set(grid, coord, value):
+    (x, y) = coord
+    old = grid[y][x]
+    grid[y][x] = value
+    return old
+
 
 def coords(grid):
     for x in range(len(grid[0])):
@@ -31,28 +46,44 @@ def adjacent(coord, grid):
                 yield (x + dx, y + dy)
 
 
+def is_accessible(grid, coord):
+    if at(grid, coord) == ROLL:
+        count = 0
+        for adj in adjacent(coord, grid):
+            if at(grid, adj) == ROLL:
+                count += 1
+        return count < 4
+
+
 def count_accessible_rolls(grid):
-    total = 0
-    for cell in coords(grid):
-        (x, y) = cell
-        if grid[y][x] == "@":
-            count = 0
-            for adj in adjacent(cell, grid):
-                (x, y) = adj
-                if grid[y][x] == "@":
-                    count += 1
-            if count < 4:
-                total += 1
-    return total
+    count = 0
+    for coord in coords(grid):
+        if is_accessible(grid, coord):
+            count += 1
+    return count
 
 
 def part1(input):
     return count_accessible_rolls(input)
 
 
+def remove_accessible_rolls(grid):
+    count = 0
+    for coord in coords(grid):
+        if is_accessible(grid, coord):
+            count += 1
+            set(grid, coord, EMPTY)
+    return count
+
+
 def part2(input):
-    pass
+    removed = 0
+    while True:
+        new = remove_accessible_rolls(input)
+        removed += new
+        if new == 0:
+            return removed
 
 
 print("part 1:", part1(INPUT))
-# print("part 2:", part2(TEST))
+print("part 2:", part2(INPUT))
