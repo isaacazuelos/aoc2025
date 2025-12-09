@@ -4,8 +4,6 @@
 
 from util import *
 
-from dataclasses import dataclass
-
 
 def parse(input):
     return [tuple(map(int, line.strip().split(","))) for line in input]
