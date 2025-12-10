@@ -47,18 +47,17 @@ def box_to_points(box):
             yield (x, y)
 
 
-def on_edge(point, polygon):
+def on_edge(point, edge):
     px, py = point
 
-    for edge in polygon_edges(polygon):
-        ((x1, y1), (x2, y2)) = edge
+    ((x1, y1), (x2, y2)) = edge
 
-        if px == x1 and px == x2 and min(y1, y2) <= py and py <= max(y1, y2):
-            return True
-        if py == y1 and py == y2 and min(x1, x2) <= px and px <= max(x1, x2):
-            return True
-
-    return False
+    if px == x1 and px == x2 and min(y1, y2) <= py and py <= max(y1, y2):
+        return True
+    elif py == y1 and py == y2 and min(x1, x2) <= px and px <= max(x1, x2):
+        return True
+    else:
+        return False
 
 
 def point_in_polygon(point, polygon):
@@ -88,7 +87,6 @@ def point_in_polygon(point, polygon):
 
 
 def polygon_edges(points):
-
     for i in range(len(points) - 1):
         yield points[i], points[i + 1]
 
@@ -111,14 +109,24 @@ def box_in_polygon(box, polygon):
     return True
 
 
-def segments(points):
-    """
-    Use a vertex list to create a sequence of line segments that form the
-    perimeter of the polygon.
-    """
-    last = points[0]
-    for vertex in points[1:]:
-        yield (last, vertex)
+def compress_point(point, key):
+    (x, y) = point
+    return (key[0].index(x), key[1].index(y))
+
+
+def compress(polygon):
+    xs = list(sorted(map(lambda p: p[0], polygon)))
+    ys = list(sorted(map(lambda p: p[1], polygon)))
+    key = (xs, ys)
+
+    poly = [compress_point(p, key) for p in polygon]
+
+    return (poly, key)
+
+
+def decompress(point, key):
+    (x, y) = point
+    return (key[0][x], key[1][y])
 
 
 def part2(points):
@@ -126,9 +134,18 @@ def part2(points):
     # first one that's inside (expensive), so we only need to consider one
     # to success, instead of every possible box to find the largest area.
 
-    for box in boxes_by_area(points):
-        if box_in_polygon(box, points):
-            return area(*box)
+    (key, small) = compress(points)
+
+    found = None
+    for box in boxes_by_area(small):
+        if box_in_polygon(box, small):
+            found = box
+            break
+
+    if found:
+        print(found)
+        (p1, p2) = found
+        return area(decompress(p1, key), decompress(p2, key))
 
 
 print("part 2:", part2(TEST))
