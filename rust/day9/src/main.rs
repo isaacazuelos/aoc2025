@@ -1,11 +1,13 @@
 //! Just wanted to see how much faster this was, and it's about 40 seconds
 //! to Python's 72 minutes, so about 108x faster.
 
+use std::{collections::HashSet, hash::Hash};
+
 #[allow(unused)]
 const TEST: &str = include_str!("../../../test/9.txt");
 const INPUT: &str = include_str!("../../../input/9.txt");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Point {
     x: u64,
     y: u64,
@@ -14,9 +16,10 @@ struct Point {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct Box(Point, Point);
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone)]
 struct Polygon {
     points: Vec<Point>,
+    known_inside: HashSet<Point>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -28,6 +31,7 @@ struct Key {
 impl Polygon {
     fn parse(input: &str) -> Polygon {
         Polygon {
+            known_inside: HashSet::new(),
             points: input
                 .lines()
                 .map(|l| {
@@ -52,6 +56,7 @@ impl Polygon {
         let key = Key { xs, ys };
         let poly = Polygon {
             points: self.points.iter().map(|p| p.compress(&key)).collect(),
+            known_inside: HashSet::new(),
         };
 
         (poly, key)
@@ -82,7 +87,7 @@ impl Polygon {
         areas.into_iter().map(|t| t.1).collect()
     }
 
-    fn contains_box(&self, b: Box) -> bool {
+    fn contains_box(&mut self, b: Box) -> bool {
         for x in b.0.x.min(b.1.x)..=b.0.x.max(b.1.x) {
             for y in b.0.y.min(b.1.y)..=b.0.y.max(b.1.y) {
                 if !self.contains(Point { x, y }) {
@@ -93,9 +98,12 @@ impl Polygon {
         true
     }
 
-    fn contains(&self, p: Point) -> bool {
-        // # we'll say our ray is is pointing to left.
+    fn contains(&mut self, p: Point) -> bool {
+        if self.known_inside.contains(&p) {
+            return true;
+        }
 
+        // # we'll say our ray is is pointing to left.
         let mut intersections = 0;
 
         for (p1, p2) in self.edges() {
@@ -108,7 +116,12 @@ impl Polygon {
             }
         }
 
-        (intersections % 2) == 1
+        if (intersections % 2) == 1 {
+            self.known_inside.insert(p);
+            true
+        } else {
+            false
+        }
     }
 
     fn edges(&self) -> impl Iterator<Item = (&Point, &Point)> {
@@ -172,7 +185,7 @@ fn day1(input: &str) -> u64 {
 
 fn day2(input: &str) -> u64 {
     let polygon = Polygon::parse(input);
-    let (small, key) = polygon.compress();
+    let (mut small, key) = polygon.compress();
 
     let compressed_boxes: Vec<_> = polygon
         .boxes_by_area()
