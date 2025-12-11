@@ -4,6 +4,8 @@
 
 from util import *
 
+import time
+
 
 def parse(input):
     return [tuple(map(int, r.split(","))) for r in input]
@@ -26,13 +28,6 @@ def candidates(points):
         for p2 in points:
             if p1 != p2:
                 yield (p1, p2)
-
-
-def part1(points):
-    return max(area(*box) for box in candidates(points))
-
-
-print("part 1:", part1(TEST))
 
 
 def boxes_by_area(points):
@@ -76,7 +71,7 @@ def point_in_polygon(point, polygon):
 
         # check intersections on edges lines to the point's left.
         # I'm not sure this is right???
-        if x1 < px and x2 < px:
+        if x1 <= px and x2 <= px:
             # does the height of the ray to the left go between the line's top
             # an bottom points?
             if min(y1, y2) <= py and py <= max(y1, y2):
@@ -114,9 +109,13 @@ def compress_point(point, key):
     return (key[0].index(x), key[1].index(y))
 
 
+def compress_box(box, key):
+    return (compress_point(box[0], key), compress_point(box[1], key))
+
+
 def compress(polygon):
-    xs = list(sorted(map(lambda p: p[0], polygon)))
-    ys = list(sorted(map(lambda p: p[1], polygon)))
+    xs = list(sorted(set(map(lambda p: p[0], polygon))))
+    ys = list(sorted(set(map(lambda p: p[1], polygon))))
     key = (xs, ys)
 
     poly = [compress_point(p, key) for p in polygon]
@@ -124,9 +123,18 @@ def compress(polygon):
     return (poly, key)
 
 
+def decompress_box(box, key):
+    return (decompress(box[0], key), decompress(box[1], key))
+
+
 def decompress(point, key):
     (x, y) = point
     return (key[0][x], key[1][y])
+
+
+def part1(points):
+
+    return max(area(*box) for box in candidates(points))
 
 
 def part2(points):
@@ -134,18 +142,20 @@ def part2(points):
     # first one that's inside (expensive), so we only need to consider one
     # to success, instead of every possible box to find the largest area.
 
-    (key, small) = compress(points)
+    (small, key) = compress(points)
 
-    found = None
-    for box in boxes_by_area(small):
+    compressed_boxes = [compress_box(b, key) for b in boxes_by_area(points)]
+    start = time.time()
+    for i, box in enumerate(compressed_boxes):
+        if (i % 1000) == 0:
+            percent = float(i) / float(len(compressed_boxes))
+            print(f"at {i} of {len(compressed_boxes)}, or {percent * 100}%")
+            print(f"in {time.time() - start}s")
+
         if box_in_polygon(box, small):
-            found = box
-            break
-
-    if found:
-        print(found)
-        (p1, p2) = found
-        return area(decompress(p1, key), decompress(p2, key))
+            return area(*decompress_box(box, key))
 
 
-print("part 2:", part2(TEST))
+print("part 1:", part1(INPUT))
+
+print("part 2:", part2(INPUT))
